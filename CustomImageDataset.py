@@ -20,14 +20,11 @@ class CustomImageDataset(Dataset):
             self.img_labels['main_type'] = self.img_labels['main_type'].str.lower()
             #self.img_labels['sub_type'] = self.img_labels['sub_type'].str.lower()
         classes = sorted(self.img_labels.iloc[:, 1].unique())
-        print(" ".join(classes))
         self.img_dir = img_dir
         self.transform = transform
         self.target_transform = target_transform
         self.task = task.lower()
-        
         self.classes = [each_class.lower() for each_class in classes]
-        print(" ".join(self.classes))
         self.class2idx = {self.classes[i].lower(): i for i in range(len(self.classes))}
         self.idx2class = {i: self.classes[i].lower() for i in range(len(self.classes))}
 
@@ -141,11 +138,6 @@ class CustomImageDataset(Dataset):
             for idx in idxs:
                 out.append(self.classes[idx])
             return out
-    
-
-
-        
-    
 
 def imshow(img):
     img = img / 2 + 0.5     # unnormalize
