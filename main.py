@@ -20,11 +20,15 @@ print(torch.cuda.is_available())
 # preprocess = transforms.Normalize((0.49267729*255.,0.43429736*255.,0.37517854*255.),(0.27001957*255., 0.26459164*255., 0.26774524*255.))
 
 
-train_dataset = CID.CustomImageDataset(annotations_file='./data/images/images/train.csv', img_dir='./data/images/images/train/')
+train_dataset = CID.CustomImageDataset(annotations_file='./data/images/images/train.csv', img_dir='./data/images/images/train/',
+                                       #transform=preprocess
+                                       )
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
 
 # Load the test set
-val_dataset = CID.CustomImageDataset(annotations_file='./data/images/images/test.csv', img_dir='./data/images/images/test/')
+val_dataset = CID.CustomImageDataset(annotations_file='./data/images/images/test.csv', img_dir='./data/images/images/test/',
+                                     #transform=preprocess
+                                     )
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=True)
 
 model = nn.Sequential(
