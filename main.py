@@ -104,7 +104,7 @@ def test_architecture(layer_sizes):
     for epoch in range(epochs):
         print(f"Epoch: {epoch} for layers {layer_sizes}")
         train(train_loader,test_loader,model,loss_fn,optimizer)
-print(('').join((['-']*196)))
+print('-'*196)
 already_tested = set()
 layers_size = [256,128,64,32]
 layers_size = [x for x in layers_size for _ in range(1, 3)]
@@ -116,9 +116,9 @@ for i in range(1,5):
             print(f'Using layers {list(x)}')
             already_tested.add(x)
             test_architecture(list(x))
-            print(('').join((['-']*196)))
+            print('-'*196)
         
-    
+
 
 
 # model.eval()
