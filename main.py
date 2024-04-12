@@ -5,6 +5,7 @@ import numpy as np
 import torch.optim as optim
 import torchvision.transforms as transforms
 import random
+import os
 from torcheval.metrics import MulticlassF1Score
 from torch.utils.data import SubsetRandomSampler
 from torch import nn
@@ -78,7 +79,10 @@ def train(train_loader,test_loader, model, loss_fn, optimizer):
 
         test_loss /= len(test_loader)
         correct /= int(len(test_loader.dataset)*0.3)
-        print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score.compute():>8f} \n")
+        accuracy = 100*correct
+        f_score = f_score.compute()
+        print(f"Test Error: \n Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n")
+    return test_loss, accuracy, f_score
 
 total_size = len(train_loader.dataset)
 #indices = list(range(total_size))
@@ -95,29 +99,79 @@ train_loader = torch.utils.data.DataLoader(train_loader.dataset, batch_size=64, 
 test_loader = torch.utils.data.DataLoader(train_loader.dataset, batch_size=64, sampler=test_sampler)
 
 
+def save_last_n(model, name, n):
+    file = f'{name}_{n-1}.pth'
+    if os.path.isfile(file):
+        os.remove(file)
+    for i in range(1, n):
+        old_file = f'{name}_{i-1}.pth'
+        file = f'{name}_{i}.pth'
+        if os.path.isfile(file):
+            os.rename(old_file, file)
+    torch.save(model, f"{name}_0.pth")
+
 def test_architecture(layer_sizes):
     model=make_model(layer_sizes)
     optimizer = optim.Adam(model.parameters(),)
     loss_fn = nn.CrossEntropyLoss()
     epochs = 15
     model.to(device)
+    loss = None
+    accuracy = None
+    f_score = None
     for epoch in range(epochs):
         print(f"Epoch: {epoch} for layers {layer_sizes}")
-        train(train_loader,test_loader,model,loss_fn,optimizer)
-print('-'*196)
-already_tested = set()
-layers_size = [256,128,64,32]
-layers_size = [x for x in layers_size for _ in range(1, 3)]
-for i in range(1,5):
-    combinations = list(itertools.combinations(layers_size,i))
-    
-    for x in combinations:
-        if x not in already_tested:
-            print(f'Using layers {list(x)}')
-            already_tested.add(x)
-            test_architecture(list(x))
-            print('-'*196)
+        loss, accuracy, f_score = train(train_loader,test_loader,model,loss_fn,optimizer)
+    return model, loss, accuracy, f_score
+
+
+def test_mlp_architectures():
+    print('-'*196)
+    best_f_score = None
+    already_tested = set()
+    layers_size = [256,128,64,32]
+    layers_size = [x for x in layers_size for _ in range(1, 3)]
+    for i in range(1,5):
+        combinations = list(itertools.combinations(layers_size,i))
         
+        for x in combinations:
+            if x not in already_tested:
+                print(f'Using layers {list(x)}')
+                already_tested.add(x)
+                model, loss, accuracy, f_score = test_architecture(list(x))
+                if best_f_score is None or f_score > best_f_score:
+                    best_f_score = f_score
+                    print(f"New best model found:{list(x)}")
+                    save_last_n(model, "best_mlp", 3)
+                print('-'*196)
+
+def train_indefinitely(model):
+    epoch = 0
+    optimizer = optim.Adam(model.parameters(),)
+    loss_fn = nn.CrossEntropyLoss()
+    best_f_score = None
+    try:
+        while True:
+            print(f"Epoch: {epoch}")
+            loss, accuracy, f_score = train(train_loader,val_loader,model,loss_fn,optimizer)
+            if epoch % 25 == 0:
+                print("Saving model")
+                save_last_n(model, "training_mlp", 3)
+                if best_f_score is None or f_score > best_f_score:
+                    best_f_score = f_score
+                    print(f"New best model found")
+                    save_last_n(model, "training_best_mlp", 1)
+            epoch += 1
+    except KeyboardInterrupt:
+        print("Training stopped, saving current model")
+        save_last_n(model, "training_mlp", 4)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        print("Saving current model")
+        save_last_n(model, "training_mlp", 4)
+
+#train_indefinitely(torch.load('best_mlp_0.pth'))
+test_mlp_architectures()
 
 
 
