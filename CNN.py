@@ -7,6 +7,7 @@ from torcheval.metrics import MulticlassF1Score
 from torch.utils.data import SubsetRandomSampler
 from torch import nn
 import pandas as pd
+import itertools
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -49,6 +50,57 @@ def make_model():
 
     return model
 
+def make_vgg(vgg_blocks, linear_layers):
+    layers = []
+    for (num_convs, out_channels) in vgg_blocks:
+        if num_convs > 0:
+            for _ in range(num_convs):
+                layers.append(nn.LazyConv2d(out_channels, kernel_size=3, padding=1))
+                layers.append(nn.ReLU())
+            layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+    layers.append(nn.Flatten())
+    for out_features in linear_layers:
+        layers.append(nn.LazyLinear(out_features))
+        layers.append(nn.ReLU())
+        layers.append(nn.Dropout())
+    layers.append(nn.LazyLinear(18))
+    return nn.Sequential(*layers)
+
+def test_vgg(vgg_blocks, linear_layers):
+    model = make_vgg(vgg_blocks, linear_layers)
+    optimizer = optim.Adam(
+        model.parameters(),
+    )
+    loss_fn = nn.CrossEntropyLoss()
+    epochs = 15
+    model.to(device)
+    loss = None
+    accuracy = None
+    f_score = None
+    for epoch in range(epochs):
+        print(f"Epoch: {epoch} for {vgg_blocks} VGG blocks and {linear_layers} linear layers")
+        loss, accuracy, f_score = train(
+            train_loader, test_loader, model, loss_fn, optimizer
+        )
+    return model, loss, accuracy, f_score
+
+def test_vgg_architectures():
+    print("-" * 196)
+    out_channels = [64, 128, 256, 512, 512]
+    all_conv_numbers = [x for x in itertools.product(range(1, 3), repeat=len(out_channels)) if sum(x) <= 8]
+    all_conv_numbers.extend([x for x in itertools.product(range(1, 3), repeat=len(out_channels)-1) if sum(x) <= 6])
+    linear_layer_sizes = [256, 1024, 4096]
+    best_f_score = None
+    all_linear_layers = zip(linear_layer_sizes, linear_layer_sizes)
+    for i, (conv_numbers, linear_layers) in enumerate(itertools.product(all_conv_numbers, all_linear_layers)):
+        vgg_blocks = tuple(zip(conv_numbers, out_channels))
+        model, loss, accuracy, f_score = test_vgg(vgg_blocks, linear_layers)
+        if best_f_score is None or f_score > best_f_score:
+            best_f_score = f_score
+            print(f"New best model found:{vgg_blocks} {linear_layers}")
+            save_last_n(model, "best_vgg", 3)
+        print("-" * 196)
+        
 
 def train(train_loader, test_loader, model, loss_fn, optimizer):
     size = int(len(train_loader.dataset) * 0.7)
