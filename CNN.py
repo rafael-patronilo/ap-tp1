@@ -241,36 +241,25 @@ def train_indefinitely(model):
         print("Saving current model")
         save_last_n(model, "training_mlp", 4)
 
+def create_submission(model):
+    #model = torch.load("training_mlp_0.pth")
+    model.eval()
+    model.to(device)
+    # pred = torch.tensor([])
+    pred = np.array([])
+
+    for X, Y in val_loader:
+        X = X.to(device)
+        Y = Y.to(device)
+        pred = np.concatenate((pred, model(X).cpu().detach().numpy().argmax(axis=1)))
+    # pred = pred.cpu().detach().numpy().argmax(axis=1)
+    print(pred)
+    submission = pd.DataFrame({"Id": val_dataset.img_labels.iloc[:, 0], "main_type": pred})
+    submission.to_csv("./submission_last.csv", index=False)
 
 # test_mlp_architectures()
 # train_indefinitely(torch.load("best_mlp_0.pth"))
-model = torch.load("best_mlp_0.pth")
-model.eval()
-model.to(device)
-# pred = torch.tensor([])
-pred = np.array([])
+test_vgg_architectures()
 
-for X, Y in val_loader:
-    X = X.to(device)
-    Y = Y.to(device)
-    pred = np.concatenate((pred, model(X).cpu().detach().numpy().argmax(axis=1)))
-# pred = pred.cpu().detach().numpy().argmax(axis=1)
-print(pred)
-submission = pd.DataFrame({"Id": val_dataset.img_labels.iloc[:, 0], "main_type": pred})
-submission.to_csv("./submission_best.csv", index=False)
-
-
-model = torch.load("training_mlp_0.pth")
-model.eval()
-model.to(device)
-# pred = torch.tensor([])
-pred = np.array([])
-
-for X, Y in val_loader:
-    X = X.to(device)
-    Y = Y.to(device)
-    pred = np.concatenate((pred, model(X).cpu().detach().numpy().argmax(axis=1)))
-# pred = pred.cpu().detach().numpy().argmax(axis=1)
-print(pred)
-submission = pd.DataFrame({"Id": val_dataset.img_labels.iloc[:, 0], "main_type": pred})
-submission.to_csv("./submission_last.csv", index=False)
+#create_submission(torch.load("best_mlp_0.pth"))
+#create_submission(torch.load("training_mlp_0.pth"))
