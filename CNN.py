@@ -204,14 +204,6 @@ def test_architecture():
     return model, loss, accuracy, f_score
 
 
-def test_mlp_architectures():
-    best_f_score = None
-    model, loss, accuracy, f_score = test_architecture()
-    if best_f_score is None or f_score > best_f_score:
-        best_f_score = f_score
-        save_last_n(model, "best_mlp", 3)
-
-
 def train_indefinitely(model):
     epoch = 0
     optimizer = optim.Adam(
