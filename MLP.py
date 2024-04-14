@@ -1,10 +1,7 @@
-
 import CustomImageDataset as CID
 import torch
 import numpy as np
 import torch.optim as optim
-import torchvision.transforms as transforms
-import random
 import os
 from torcheval.metrics import MulticlassF1Score
 from torch.utils.data import SubsetRandomSampler
@@ -12,25 +9,22 @@ from torch import nn
 import itertools
 
 
-device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+train_dataset = CID.CustomImageDataset(
+    annotations_file="./data/images/images/train.csv",
+    img_dir="./data/images/images/train/",
+    # transform=preprocess
 )
-
-
-
-
-
-train_dataset = CID.CustomImageDataset(annotations_file='./data/images/images/train.csv', img_dir='./data/images/images/train/',
-                                       #transform=preprocess
-                                       )
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
 
 # Load the test set
-val_dataset = CID.CustomImageDataset(annotations_file='./data/images/images/test.csv', img_dir='./data/images/images/test/',
-                                     #transform=preprocess
-                                     )
+val_dataset = CID.CustomImageDataset(
+    annotations_file="./data/images/images/test.csv",
+    img_dir="./data/images/images/test/",
+    # transform=preprocess
+)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=True)
 
 
@@ -47,23 +41,24 @@ def make_model(layer_sizes):
     layers.append(nn.Linear(in_features, 18))
     return nn.Sequential(*layers)
 
-def train(train_loader,test_loader, model, loss_fn, optimizer):
-    size = int(len(train_loader.dataset)*0.7)
-    
+
+def train(train_loader, test_loader, model, loss_fn, optimizer):
+    size = int(len(train_loader.dataset) * 0.7)
+
     model.train()
     for batch, (X, y) in enumerate(train_loader):
         X, y = X.to(device), y.to(device)
         optimizer.zero_grad()
-        #y = nn.functional.one_hot(y, num_classes=18)
-        #y = torch.tensor(y.clone().detach(),dtype=torch.float32)
+        # y = nn.functional.one_hot(y, num_classes=18)
+        # y = torch.tensor(y.clone().detach(),dtype=torch.float32)
         # Compute prediction error
         pred = model(X)
         loss = loss_fn(pred, y)
         # Backpropagation
         loss.backward()
         optimizer.step()
-        #loss, current = loss.item(), ((batch )*64+ len(X) )if not len(X)== 64 else (batch+1)*len(X)
-        #print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        # loss, current = loss.item(), ((batch )*64+ len(X) )if not len(X)== 64 else (batch+1)*len(X)
+        # print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
     with torch.no_grad():
         model.eval()
@@ -78,15 +73,18 @@ def train(train_loader,test_loader, model, loss_fn, optimizer):
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()
 
         test_loss /= len(test_loader)
-        correct /= int(len(test_loader.dataset)*0.3)
-        accuracy = 100*correct
+        correct /= int(len(test_loader.dataset) * 0.3)
+        accuracy = 100 * correct
         f_score = f_score.compute()
-        print(f"Test Error: \n Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n")
+        print(
+            f"Test Error: \n Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
+        )
     return test_loss, accuracy, f_score
 
+
 total_size = len(train_loader.dataset)
-#indices = list(range(total_size))
-split = int(0.7 * total_size)  
+# indices = list(range(total_size))
+split = int(0.7 * total_size)
 indices = np.arange(total_size)
 train_indices = indices[:split]
 test_indices = indices[split:]
@@ -95,24 +93,31 @@ test_indices = indices[split:]
 train_sampler = SubsetRandomSampler(train_indices)
 test_sampler = SubsetRandomSampler(test_indices)
 
-train_loader = torch.utils.data.DataLoader(train_loader.dataset, batch_size=64, sampler=train_sampler)
-test_loader = torch.utils.data.DataLoader(train_loader.dataset, batch_size=64, sampler=test_sampler)
+train_loader = torch.utils.data.DataLoader(
+    train_loader.dataset, batch_size=64, sampler=train_sampler
+)
+test_loader = torch.utils.data.DataLoader(
+    train_loader.dataset, batch_size=64, sampler=test_sampler
+)
 
 
 def save_last_n(model, name, n):
-    file = f'{name}_{n-1}.pth'
+    file = f"{name}_{n-1}.pth"
     if os.path.isfile(file):
         os.remove(file)
     for i in range(1, n):
-        old_file = f'{name}_{i-1}.pth'
-        file = f'{name}_{i}.pth'
+        old_file = f"{name}_{i-1}.pth"
+        file = f"{name}_{i}.pth"
         if os.path.isfile(file):
             os.rename(old_file, file)
     torch.save(model, f"{name}_0.pth")
 
+
 def test_architecture(layer_sizes):
-    model=make_model(layer_sizes)
-    optimizer = optim.Adam(model.parameters(),)
+    model = make_model(layer_sizes)
+    optimizer = optim.Adam(
+        model.parameters(),
+    )
     loss_fn = nn.CrossEntropyLoss()
     epochs = 15
     model.to(device)
@@ -121,45 +126,52 @@ def test_architecture(layer_sizes):
     f_score = None
     for epoch in range(epochs):
         print(f"Epoch: {epoch} for layers {layer_sizes}")
-        loss, accuracy, f_score = train(train_loader,test_loader,model,loss_fn,optimizer)
+        loss, accuracy, f_score = train(
+            train_loader, test_loader, model, loss_fn, optimizer
+        )
     return model, loss, accuracy, f_score
 
 
 def test_mlp_architectures():
-    print('-'*196)
+    print("-" * 196)
     best_f_score = None
     already_tested = set()
-    layers_size = [256,128,64,32]
+    layers_size = [256, 128, 64, 32]
     layers_size = [x for x in layers_size for _ in range(1, 3)]
-    for i in range(1,5):
-        combinations = list(itertools.combinations(layers_size,i))
-        
+    for i in range(1, 5):
+        combinations = list(itertools.combinations(layers_size, i))
+
         for x in combinations:
             if x not in already_tested:
-                print(f'Using layers {list(x)}')
+                print(f"Using layers {list(x)}")
                 already_tested.add(x)
                 model, loss, accuracy, f_score = test_architecture(list(x))
                 if best_f_score is None or f_score > best_f_score:
                     best_f_score = f_score
                     print(f"New best model found:{list(x)}")
                     save_last_n(model, "best_mlp", 3)
-                print('-'*196)
+                print("-" * 196)
+
 
 def train_indefinitely(model):
     epoch = 0
-    optimizer = optim.Adam(model.parameters(),)
+    optimizer = optim.Adam(
+        model.parameters(),
+    )
     loss_fn = nn.CrossEntropyLoss()
     best_f_score = None
     try:
         while True:
             print(f"Epoch: {epoch}")
-            loss, accuracy, f_score = train(train_loader,val_loader,model,loss_fn,optimizer)
+            loss, accuracy, f_score = train(
+                train_loader, val_loader, model, loss_fn, optimizer
+            )
             if epoch % 25 == 0:
                 print("Saving model")
                 save_last_n(model, "training_mlp", 3)
                 if best_f_score is None or f_score > best_f_score:
                     best_f_score = f_score
-                    print(f"New best model found")
+                    print("New best model found")
                     save_last_n(model, "training_best_mlp", 1)
             epoch += 1
     except KeyboardInterrupt:
@@ -170,31 +182,8 @@ def train_indefinitely(model):
         print("Saving current model")
         save_last_n(model, "training_mlp", 4)
 
-#train_indefinitely(torch.load('best_mlp_0.pth'))
-test_mlp_architectures()
 
-
-
-# model.eval()
-# size = len(train_loader.dataset)
-# for batch, (X, y) in enumerate(train_dataset):
-#         X, y = X.to(device), y.to(device)
-
-#         # Compute prediction error
-#         pred = model(X)
-#         loss = loss_fn(pred, y)
-
-#         # Backpropagation
-#         loss.backward()
-#         optimizer.step()
-#         optimizer.zero_grad()
-
-#         if batch % 100 == 0:
-#             loss, current = loss.item(), (batch + 1) * len(X)
-#             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-            
-#test_dataset = None
-#y_pred_tensor = None
-
-#submission = pd.DataFrame({'Id': test_dataset.img_labels.iloc[:, 0], 'main_type': y_pred_tensor})
-#submission.to_csv('./submission.csv', index=False)
+submission = pd.DataFrame(
+    {"Id": test_dataset.img_labels.iloc[:, 0], "main_type": y_pred_tensor}
+)
+submission.to_csv("./submission.csv", index=False)
