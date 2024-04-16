@@ -110,7 +110,7 @@ def test_vgg_architectures():
         
 
 def train(train_loader, test_loader, model, loss_fn, optimizer):
-    size = int(len(train_loader.dataset) * 0.7)
+    size = len(train_loader.dataset)
 
     model.train()
     for batch, (X, y) in enumerate(train_loader):
@@ -127,13 +127,13 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
         # loss, current = loss.item(), ((batch )*64+ len(X) )if not len(X)== 64 else (batch+1)*len(X)
         # print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
     test_loss, accuracy, f_score = evaluate(
-        model, loss_fn, train_loader, int(len(test_loader.dataset) * 0.7)
+        model, loss_fn, train_loader
     )
     print(
         f"Train Error: \n Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
     )
     test_loss, accuracy, f_score = evaluate(
-        model, loss_fn, test_loader, int(len(test_loader.dataset) * 0.3)
+        model, loss_fn, test_loader
     )
     print(
         f"Test Error: \n Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
@@ -141,7 +141,8 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
     return test_loss, accuracy, f_score
 
 
-def evaluate(model, loss_fn, loader, total_size):
+def evaluate(model, loss_fn, loader):
+    total_size = len(loader.dataset)
     with torch.no_grad():
         model.eval()
         test_loss, correct = 0, 0
@@ -161,22 +162,27 @@ def evaluate(model, loss_fn, loader, total_size):
     return test_loss, accuracy, f_score
 
 
-total_size = len(train_loader.dataset)
+#total_size = len(train_loader.dataset)
 # indices = list(range(total_size))
-split = int(0.7 * total_size)
-indices = np.arange(total_size)
-train_indices = indices[:split]
-test_indices = indices[split:]
+#split = int(0.7 * total_size)
+#indices = np.arange(total_size)
+#train_indices = indices[:split]
+#test_indices = indices[split:]
+train_dataset, test_dataset = torch.utils.data.random_split(
+    train_loader.dataset, 
+    [0.7, 0.3], 
+    generator=torch.Generator().manual_seed(42)
+)
 
 # Creating PT data samplers and loaders:
-train_sampler = SubsetRandomSampler(train_indices)
-test_sampler = SubsetRandomSampler(test_indices)
+#train_sampler = SubsetRandomSampler(train_indices)
+#test_sampler = SubsetRandomSampler(test_indices)
 
 train_loader = torch.utils.data.DataLoader(
-    train_loader.dataset, batch_size=64, sampler=train_sampler
+    train_dataset, batch_size=64, shuffle=True
 )
 test_loader = torch.utils.data.DataLoader(
-    train_loader.dataset, batch_size=64, sampler=test_sampler
+    test_dataset, batch_size=64, shuffle=True
 )
 
 
