@@ -2,6 +2,7 @@ import CustomImageDataset as CID
 import torch
 import numpy as np
 import torch.optim as optim
+import sys
 import os
 from torcheval.metrics import MulticlassF1Score
 from torch.utils.data import SubsetRandomSampler
@@ -32,9 +33,11 @@ def make_model():
     # TODO: Implement a function that creates a model with the given layer sizes
     model = nn.Sequential(
         nn.LazyConv2d(96, kernel_size=11, stride=4, padding=1),
+        nn.BatchNorm(96),
         nn.ReLU(),
         nn.MaxPool2d(kernel_size=3, stride=2),
         nn.LazyConv2d(256, kernel_size=5, padding=2),
+        nn.BatchNorm(256),
         nn.ReLU(),
         nn.MaxPool2d(kernel_size=3, stride=2),
         # nn.LazyConv2d(384, kernel_size=3, padding=1),
@@ -56,6 +59,7 @@ def make_vgg(vgg_blocks, linear_layers):
         if num_convs > 0:
             for _ in range(num_convs):
                 layers.append(nn.LazyConv2d(out_channels, kernel_size=3, padding=1))
+                layers.append(nn.BatchNorm(out_channels))
                 layers.append(nn.ReLU())
             layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
     layers.append(nn.Flatten())
@@ -78,7 +82,7 @@ def test_vgg(vgg_blocks, linear_layers):
     accuracy = None
     f_score = None
     for epoch in range(epochs):
-        print(f"Epoch: {epoch} for {tuple(vgg_blocks)} VGG blocks and {linear_layers} linear layers")
+        print(f"Epoch: {epoch} for {tuple(*vgg_blocks)} VGG blocks and {linear_layers} linear layers")
         loss, accuracy, f_score = train(
             train_loader, test_loader, model, loss_fn, optimizer
         )
@@ -114,6 +118,8 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
 
     model.train()
     for batch, (X, y) in enumerate(train_loader):
+        print(".", end="")
+        sys.stdout.flush()
         X, y = X.to(device), y.to(device)
         optimizer.zero_grad()
         # y = nn.functional.one_hot(y, num_classes=18)
