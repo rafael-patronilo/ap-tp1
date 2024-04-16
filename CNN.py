@@ -64,7 +64,7 @@ def make_vgg(vgg_blocks, linear_layers):
         layers.append(nn.ReLU())
         layers.append(nn.Dropout())
     layers.append(nn.LazyLinear(18))
-    return nn.Sequential(*layers)
+    return nn.Sequential(nn.LayerNorm([3, 300, 400]), *layers)
 
 def test_vgg(vgg_blocks, linear_layers):
     model = make_vgg(vgg_blocks, linear_layers)
@@ -78,7 +78,7 @@ def test_vgg(vgg_blocks, linear_layers):
     accuracy = None
     f_score = None
     for epoch in range(epochs):
-        print(f"Epoch: {epoch} for {vgg_blocks} VGG blocks and {linear_layers} linear layers")
+        print(f"Epoch: {epoch} for {tuple(vgg_blocks)} VGG blocks and {linear_layers} linear layers")
         loss, accuracy, f_score = train(
             train_loader, test_loader, model, loss_fn, optimizer
         )
