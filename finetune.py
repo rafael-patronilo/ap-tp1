@@ -7,6 +7,7 @@ import os
 from torcheval.metrics import MulticlassF1Score
 from torch.utils.data import SubsetRandomSampler
 from torch import nn
+import torchvision
 import pandas as pd
 import itertools
 
@@ -112,7 +113,7 @@ def evaluate(model, loss_fn, loader):
 
 def train_fine_tuning(model, learning_rate,
                       param_group=True):
-    loss_fn = nn.CrossEntropyLoss(reduction="none")
+    loss_fn = nn.CrossEntropyLoss()
     optimizer = None
     if param_group:
         params_1x = [param for name, param in model.named_parameters()
@@ -145,5 +146,9 @@ def train_fine_tuning(model, learning_rate,
         save_last_n(model, "training_finetune", 4)
     except Exception as e:
         print(f"An error occurred: {e}")
-        print("Saving current model")
         save_last_n(model, "training_finetune", 4)
+        raise e
+        
+finetune_net = torchvision.models.resnet18(pretrained=True)
+prepare_pretrained_model(finetune_net)
+train_fine_tuning(finetune_net, 0.001, param_group=True)
