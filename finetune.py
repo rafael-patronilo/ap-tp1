@@ -11,6 +11,7 @@ import torchvision
 import pandas as pd
 import itertools
 import traceback
+import gc
 
 EPOCHS_PER_MODEL = 50
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -84,6 +85,8 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
         optimizer.step()
         # loss, current = loss.item(), ((batch )*64+ len(X) )if not len(X)== 64 else (batch+1)*len(X)
         # print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        del loss
+        gc.collect()
     print()
     print("Train Error:")
     test_loss, accuracy, f_score = evaluate(
