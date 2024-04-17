@@ -12,6 +12,7 @@ import pandas as pd
 import itertools
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+print(device)
 
 
 train_dataset = CID.CustomImageDataset(
@@ -152,4 +153,5 @@ def train_fine_tuning(model, learning_rate,
         
 finetune_net = torchvision.models.resnet18(pretrained=True)
 prepare_pretrained_model(finetune_net)
+finetune_net.to(device)
 train_fine_tuning(finetune_net, 0.001, param_group=True)
