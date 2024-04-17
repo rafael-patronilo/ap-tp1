@@ -11,6 +11,7 @@ import torchvision
 import pandas as pd
 import itertools
 import traceback
+from torchsummary import summary
 import gc
 
 EPOCHS_PER_MODEL = 50
@@ -187,7 +188,13 @@ models = [
 
 for name, builder in models:
     print("Training model", name)
-    model = builder()
-    prepare_pretrained_model(model)
-    model.to(device)
-    train_fine_tuning(name, model, 0.001, param_group=True)
+    try:
+        model = builder()
+        prepare_pretrained_model(model)
+        print(summary(model, (3, 300, 400)))
+        model.to(device)
+        train_fine_tuning(name, model, 0.001, param_group=True)
+    except Exception as e:
+        print("Error during building model:")
+        print(traceback.format_exc())
+        print("Skipping")
