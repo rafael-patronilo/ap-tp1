@@ -28,9 +28,9 @@ preprocess = torchvision.transforms.Compose([
 val_dataset = CID.CustomImageDataset(
     annotations_file="./data/images/images/test.csv",
     img_dir="./data/images/images/test/",
-    transform=preprocess
+    #transform=preprocess
 )
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=True)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64)
 
 
 def create_submission(model):
