@@ -191,8 +191,8 @@ def train_fine_tuning(name, model, learning_rate,
 models = [
     ("alexnet", lambda : torchvision.models.alexnet(pretrained=True)),
     ("googlenet", lambda : torchvision.models.googlenet(pretrained=True)),
-    ("regnet_x_1_6gf", lambda : torch.hub.load('facebookresearch/pycls', 'regnet_x_1.6gf', pretrained=True)),
-    ("regnet_y_400mf", lambda : torch.hub.load('facebookresearch/pycls', 'regnet_y_400mf', pretrained=True)),
+    ("regnet_x_1_6gf", lambda : torchvision.regnet_x_1_6gf(pretrained=True)),
+    ("regnet_y_400mf", lambda : torchvision.regnet_y_400mf(pretrained=True)),
     ("resnet18", lambda : torchvision.models.resnet18(pretrained=True)),
 ]
 
