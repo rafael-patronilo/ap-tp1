@@ -199,14 +199,14 @@ models = [
     ("resnet18", lambda : torchvision.models.resnet18(pretrained=True)),
 ]
 
-for name, builder in models:
+for name, builder in models[int(sys.argv[1])::2]:
     print("Training model", name)
     try:
         model = builder()
         prepare_pretrained_model(model)
         model.to(device)
         print(summary(model, (3, 300, 400)))
-        #train_fine_tuning(name, model, 0.001, param_group=True)
+        train_fine_tuning(name, model, 0.001, param_group=True)
     except Exception as e:
         print("Error during building model:")
         print(traceback.format_exc())
