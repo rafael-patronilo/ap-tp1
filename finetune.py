@@ -191,8 +191,8 @@ for name, builder in models:
     try:
         model = builder()
         prepare_pretrained_model(model)
-        print(summary(model, (3, 300, 400)))
         model.to(device)
+        print(summary(model, (3, 300, 400)))
         train_fine_tuning(name, model, 0.001, param_group=True)
     except Exception as e:
         print("Error during building model:")
