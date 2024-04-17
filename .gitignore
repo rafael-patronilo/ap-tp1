@@ -1,3 +1,5 @@
 Result.txt
 __pycache__/
 *.zip
+*submission*.csv
+*.pth
