@@ -11,7 +11,7 @@ import torchvision
 import pandas as pd
 import itertools
 import traceback
-from torchsummary import summary
+#from torchsummary import summary
 import gc
 
 EPOCHS_PER_MODEL = 50
@@ -71,12 +71,12 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
     size = len(train_loader.dataset)
 
     model.train()
-    optimizer.zero_grad()
+    
     for batch, (X, y) in enumerate(train_loader):
         print(".", end="")
         sys.stdout.flush()
         X, y = X.to(device), y.to(device)
-        
+        optimizer.zero_grad()
         # y = nn.functional.one_hot(y, num_classes=18)
         # y = torch.tensor(y.clone().detach(),dtype=torch.float32)
         # Compute prediction error
@@ -87,8 +87,8 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
         optimizer.step()
         # loss, current = loss.item(), ((batch )*64+ len(X) )if not len(X)== 64 else (batch+1)*len(X)
         # print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-        del loss
-        gc.collect()
+        #del loss
+        #gc.collect()
         optimizer.zero_grad()
     print()
     print("Train Error:")
@@ -180,6 +180,9 @@ def train_fine_tuning(name, model, learning_rate,
     except KeyboardInterrupt:
         print("Training stopped, saving current model")
         save_last_n(model, f"training_{name}", 2)
+        cmd = input("If you want to exit, type q. Otherwise, hit enter.")
+        if cmd == "q":
+            exit(0)
     except Exception as e:
         print("Error during training:")
         print(traceback.format_exc())
@@ -190,23 +193,32 @@ def train_fine_tuning(name, model, learning_rate,
 
 models = [
     #("alexnet", lambda : torchvision.models.alexnet(pretrained=True)),
-    ("googlenet", lambda : torchvision.models.googlenet(pretrained=True)),
-    ("regnet_x_1_6gf", lambda : torchvision.models.regnet_x_1_6gf(pretrained=True)),
+    ("regnet_y_400mf", lambda : torchvision.models.regnet_y_400mf(pretrained=True)),
     ("regnet_x_400mf", lambda : torchvision.models.regnet_x_400mf(pretrained=True)),
     ("regnet_x_800mf", lambda : torchvision.models.regnet_x_800mf(pretrained=True)),
     ("regnet_y_800mf", lambda : torchvision.models.regnet_y_800mf(pretrained=True)),
-    ("regnet_y_400mf", lambda : torchvision.models.regnet_y_400mf(pretrained=True)),
-    ("resnet18", lambda : torchvision.models.resnet18(pretrained=True)),
+    ("regnet_x_1_6gf", lambda : torchvision.models.regnet_x_1_6gf(pretrained=True)),
+    ("googlenet", lambda : torchvision.models.googlenet(pretrained=True)),
+    ("resnet18", lambda : torchvision.models.resnet18(pretrained=True))
 ]
-
-for name, builder in models[int(sys.argv[1])::2]:
+start = int(sys.argv[1])
+print("Training the ", "odd" if start == 1 else "even", " models")
+for name, builder in models[start::2]:
+    print("="*100)
+    print("="*100)
     print("Training model", name)
+    print("="*100)
+    print("="*100)
     try:
         model = builder()
         prepare_pretrained_model(model)
         model.to(device)
-        print(summary(model, (3, 300, 400)))
+        #print(summary(model, (3, 300, 400)))
         train_fine_tuning(name, model, 0.001, param_group=True)
+    except KeyboardInterrupt:
+        cmd = input("If you want to exit, type q. Otherwise, hit enter.")
+        if cmd == "q":
+            exit(0)
     except Exception as e:
         print("Error during building model:")
         print(traceback.format_exc())
