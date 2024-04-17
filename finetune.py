@@ -71,11 +71,12 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
     size = len(train_loader.dataset)
 
     model.train()
+    optimizer.zero_grad()
     for batch, (X, y) in enumerate(train_loader):
         print(".", end="")
         sys.stdout.flush()
         X, y = X.to(device), y.to(device)
-        optimizer.zero_grad()
+        
         # y = nn.functional.one_hot(y, num_classes=18)
         # y = torch.tensor(y.clone().detach(),dtype=torch.float32)
         # Compute prediction error
@@ -88,6 +89,7 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
         # print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
         del loss
         gc.collect()
+        optimizer.zero_grad()
     print()
     print("Train Error:")
     test_loss, accuracy, f_score = evaluate(
@@ -164,10 +166,14 @@ def train_fine_tuning(name, model, learning_rate,
             if epoch % 25 == 0:
                 print("Saving model")
                 save_last_n(model, f"training_{name}", 1)
+                with open(f"{name}.txt", "a") as f:
+                    f.write(f"Epoch: {epoch}, F1-score: {f_score}\n")
             if best_f_score is None or f_score > best_f_score:
                 best_f_score = f_score
                 print("New best model found")
                 save_last_n(model, f"training_best_{name}", 1)
+                with open(f"{name}.txt", "a") as f:
+                    f.write(f"Epoch: {epoch}, Best F1-score: {f_score}\n")
         print("Finished training {name}")
         print("Saving model")
         save_last_n(model, f"training_{name}", 1)
