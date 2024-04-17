@@ -201,9 +201,13 @@ models = [
     ("googlenet", lambda : torchvision.models.googlenet(pretrained=True)),
     ("resnet18", lambda : torchvision.models.resnet18(pretrained=True))
 ]
+
 start = int(sys.argv[1])
 print("Training the ", "odd" if start == 1 else "even", " models")
-for name, builder in models[start::2]:
+models = models[start::2]
+print([x[0] for x in models])
+
+for name, builder in models:
     print("="*100)
     print("="*100)
     print("Training model", name)
