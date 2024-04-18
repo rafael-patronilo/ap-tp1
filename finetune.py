@@ -71,12 +71,12 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
     size = len(train_loader.dataset)
 
     model.train()
+    optimizer.zero_grad()
     
     for batch, (X, y) in enumerate(train_loader):
         print(".", end="")
         sys.stdout.flush()
         X, y = X.to(device), y.to(device)
-        optimizer.zero_grad()
         # y = nn.functional.one_hot(y, num_classes=18)
         # y = torch.tensor(y.clone().detach(),dtype=torch.float32)
         # Compute prediction error
