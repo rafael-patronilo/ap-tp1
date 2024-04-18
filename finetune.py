@@ -190,12 +190,13 @@ def train_fine_tuning(
                 save_last_n(model, f"training_best_{name}", 1)
                 with open(f"{name}.txt", "a") as f:
                     f.write(f"Epoch: {epoch}, Best F1-score: {f_score}\n")
+            tsf = time.time()
+            eta = (EPOCHS_PER_MODEL - epoch) * (tsf - tsi)
+            print(convert_seconds(eta))
         print("Finished training {name}")
         print("Saving model")
         save_last_n(model, f"training_{name}", 1)
-        tsf = time.time()
-        eta = (EPOCHS_PER_MODEL - epoch) * (tsf - tsi)
-        print(convert_seconds(eta))
+
     except KeyboardInterrupt:
         print("Training stopped, saving current model")
         save_last_n(model, f"training_{name}", 2)
