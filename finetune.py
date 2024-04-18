@@ -11,40 +11,39 @@ import torchvision
 import pandas as pd
 import itertools
 import traceback
-#from torchsummary import summary
+import time
+
+# from torchsummary import summary
 import gc
 
 EPOCHS_PER_MODEL = 50
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
-preprocess = torchvision.transforms.Compose([
-    torchvision.transforms.Normalize(
-        mean=[0.0, 0.0, 0.0],
-        std=[255.0, 255.0, 255.0]
-    ),
-    torchvision.transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
-])
+preprocess = torchvision.transforms.Compose(
+    [
+        torchvision.transforms.Normalize(
+            mean=[0.0, 0.0, 0.0], std=[255.0, 255.0, 255.0]
+        ),
+        torchvision.transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+        ),
+    ]
+)
 
 orig_train_dataset = CID.CustomImageDataset(
     annotations_file="./data/images/images/train.csv",
     img_dir="./data/images/images/train/",
-    transform=preprocess
+    transform=preprocess,
 )
 
 # Load the test set
 val_dataset = CID.CustomImageDataset(
     annotations_file="./data/images/images/test.csv",
     img_dir="./data/images/images/test/",
-    transform=preprocess
+    transform=preprocess,
 )
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=True)
-
-
-
 
 
 def split_training_set(seed_source=57473):
@@ -52,27 +51,25 @@ def split_training_set(seed_source=57473):
     seed = hash(seed_source)
     print(f"Splitting training set using seed {seed} from {seed_source}")
     train_dataset, test_dataset = torch.utils.data.random_split(
-        orig_train_dataset, 
-        [0.7, 0.3], 
-        generator=torch.Generator().manual_seed(seed)
+        orig_train_dataset, [0.7, 0.3], generator=torch.Generator().manual_seed(seed)
     )
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=64, shuffle=True
     )
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=64, shuffle=True
-    )
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=True)
+
 
 def prepare_pretrained_model(model):
     model.fc = nn.Linear(model.fc.in_features, 18)
     nn.init.xavier_uniform_(model.fc.weight)
+
 
 def train(train_loader, test_loader, model, loss_fn, optimizer):
     size = len(train_loader.dataset)
 
     model.train()
     optimizer.zero_grad()
-    
+
     for batch, (X, y) in enumerate(train_loader):
         print(".", end="")
         sys.stdout.flush()
@@ -87,25 +84,22 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
         optimizer.step()
         # loss, current = loss.item(), ((batch )*64+ len(X) )if not len(X)== 64 else (batch+1)*len(X)
         # print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-        #del loss
-        #gc.collect()
+        # del loss
+        # gc.collect()
         optimizer.zero_grad()
     print()
     print("Train Error:")
-    test_loss, accuracy, f_score = evaluate(
-        model, loss_fn, train_loader
-    )
+    test_loss, accuracy, f_score = evaluate(model, loss_fn, train_loader)
     print(
         f"Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
     )
     print("Test Error:")
-    test_loss, accuracy, f_score = evaluate(
-        model, loss_fn, test_loader
-    )
+    test_loss, accuracy, f_score = evaluate(model, loss_fn, test_loader)
     print(
         f"Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
     )
     return test_loss, accuracy, f_score
+
 
 def save_last_n(model, name, n):
     file = f"{name}_{n-1}.pth"
@@ -117,6 +111,7 @@ def save_last_n(model, name, n):
         if os.path.isfile(file):
             os.rename(file, old_file)
     torch.save(model, f"{name}_0.pth")
+
 
 def evaluate(model, loss_fn, loader):
     total_size = len(loader.dataset)
@@ -140,26 +135,47 @@ def evaluate(model, loss_fn, loader):
         f_score = f_score.compute()
     return test_loss, accuracy, f_score
 
-def train_fine_tuning(name, model, learning_rate,
-                      param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL):
+
+def convert_seconds(total_seconds):
+    hours = int(total_seconds // 3600)
+    minutes = int((total_seconds % 3600) // 60)
+    seconds = int(total_seconds % 60)
+    return f"ETA: {hours}h {minutes}m {seconds}s"
+
+
+def train_fine_tuning(
+    name, model, learning_rate, param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
+):
     split_training_set(name)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = None
     if param_group:
-        params_1x = [param for name, param in model.named_parameters()
-             if name not in ["fc.weight", "fc.bias"]]
-        optimizer = torch.optim.SGD([{'params': params_1x},
-                                   {'params': model.fc.parameters(),
-                                    'lr': learning_rate * 10}],
-                                lr=learning_rate, weight_decay=0.001)
+        params_1x = [
+            param
+            for name, param in model.named_parameters()
+            if name not in ["fc.weight", "fc.bias"]
+        ]
+        optimizer = torch.optim.SGD(
+            [
+                {"params": params_1x},
+                {"params": model.fc.parameters(), "lr": learning_rate * 10},
+            ],
+            lr=learning_rate,
+            weight_decay=0.001,
+        )
     else:
-        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate,
-                                  weight_decay=0.001)
-    #epoch = 0
+        optimizer = torch.optim.SGD(
+            model.parameters(), lr=learning_rate, weight_decay=0.001
+        )
+    # epoch = 0
     best_f_score = None
     try:
         for epoch in range(from_epoch, epochs):
+            tsi = time.time()
             print(f"Epoch: {epoch}")
+
+            # ts stores the time in seconds
+
             loss, accuracy, f_score = train(
                 train_loader, test_loader, model, loss_fn, optimizer
             )
@@ -177,6 +193,9 @@ def train_fine_tuning(name, model, learning_rate,
         print("Finished training {name}")
         print("Saving model")
         save_last_n(model, f"training_{name}", 1)
+        tsf = time.time()
+        eta = (EPOCHS_PER_MODEL - epoch) * (tsf - tsi)
+        print(convert_seconds(eta))
     except KeyboardInterrupt:
         print("Training stopped, saving current model")
         save_last_n(model, f"training_{name}", 2)
@@ -190,16 +209,15 @@ def train_fine_tuning(name, model, learning_rate,
         save_last_n(model, f"training_{name}", 2)
 
 
-
 models = [
-    #("alexnet", lambda : torchvision.models.alexnet(pretrained=True)),
-    ("regnet_y_400mf", lambda : torchvision.models.regnet_y_400mf(pretrained=True)),
-    ("regnet_x_400mf", lambda : torchvision.models.regnet_x_400mf(pretrained=True)),
-    ("regnet_x_800mf", lambda : torchvision.models.regnet_x_800mf(pretrained=True)),
-    ("regnet_y_800mf", lambda : torchvision.models.regnet_y_800mf(pretrained=True)),
-    ("regnet_x_1_6gf", lambda : torchvision.models.regnet_x_1_6gf(pretrained=True)),
-    ("googlenet", lambda : torchvision.models.googlenet(pretrained=True)),
-    ("resnet18", lambda : torchvision.models.resnet18(pretrained=True))
+    # ("alexnet", lambda : torchvision.models.alexnet(pretrained=True)),
+    ("regnet_y_400mf", lambda: torchvision.models.regnet_y_400mf(pretrained=True)),
+    ("regnet_x_400mf", lambda: torchvision.models.regnet_x_400mf(pretrained=True)),
+    ("regnet_x_800mf", lambda: torchvision.models.regnet_x_800mf(pretrained=True)),
+    ("regnet_y_800mf", lambda: torchvision.models.regnet_y_800mf(pretrained=True)),
+    ("regnet_x_1_6gf", lambda: torchvision.models.regnet_x_1_6gf(pretrained=True)),
+    ("googlenet", lambda: torchvision.models.googlenet(pretrained=True)),
+    ("resnet18", lambda: torchvision.models.resnet18(pretrained=True)),
 ]
 
 if __name__ == "__main__":
@@ -209,16 +227,16 @@ if __name__ == "__main__":
     print([x[0] for x in models])
 
     for name, builder in models:
-        print("="*100)
-        print("="*100)
+        print("=" * 100)
+        print("=" * 100)
         print("Training model", name)
-        print("="*100)
-        print("="*100)
+        print("=" * 100)
+        print("=" * 100)
         try:
             model = builder()
             prepare_pretrained_model(model)
             model.to(device)
-            #print(summary(model, (3, 300, 400)))
+            # print(summary(model, (3, 300, 400)))
             train_fine_tuning(name, model, 0.001, param_group=True)
         except KeyboardInterrupt:
             cmd = input("If you want to exit, type q. Otherwise, hit enter.")
