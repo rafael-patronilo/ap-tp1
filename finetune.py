@@ -141,7 +141,7 @@ def evaluate(model, loss_fn, loader):
     return test_loss, accuracy, f_score
 
 def train_fine_tuning(name, model, learning_rate,
-                      param_group=True):
+                      param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL):
     split_training_set(name)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = None
@@ -158,7 +158,7 @@ def train_fine_tuning(name, model, learning_rate,
     #epoch = 0
     best_f_score = None
     try:
-        for epoch in range(EPOCHS_PER_MODEL):
+        for epoch in range(from_epoch, epochs):
             print(f"Epoch: {epoch}")
             loss, accuracy, f_score = train(
                 train_loader, test_loader, model, loss_fn, optimizer
@@ -202,28 +202,29 @@ models = [
     ("resnet18", lambda : torchvision.models.resnet18(pretrained=True))
 ]
 
-start = int(sys.argv[1])
-print("Training the ", "odd" if start == 1 else "even", " models")
-models = models[start::2]
-print([x[0] for x in models])
+if __name__ == "__main__":
+    start = int(sys.argv[1])
+    print("Training the ", "odd" if start == 1 else "even", " models")
+    models = models[start::2]
+    print([x[0] for x in models])
 
-for name, builder in models:
-    print("="*100)
-    print("="*100)
-    print("Training model", name)
-    print("="*100)
-    print("="*100)
-    try:
-        model = builder()
-        prepare_pretrained_model(model)
-        model.to(device)
-        #print(summary(model, (3, 300, 400)))
-        train_fine_tuning(name, model, 0.001, param_group=True)
-    except KeyboardInterrupt:
-        cmd = input("If you want to exit, type q. Otherwise, hit enter.")
-        if cmd == "q":
-            exit(0)
-    except Exception as e:
-        print("Error during building model:")
-        print(traceback.format_exc())
-        print("Skipping")
+    for name, builder in models:
+        print("="*100)
+        print("="*100)
+        print("Training model", name)
+        print("="*100)
+        print("="*100)
+        try:
+            model = builder()
+            prepare_pretrained_model(model)
+            model.to(device)
+            #print(summary(model, (3, 300, 400)))
+            train_fine_tuning(name, model, 0.001, param_group=True)
+        except KeyboardInterrupt:
+            cmd = input("If you want to exit, type q. Otherwise, hit enter.")
+            if cmd == "q":
+                exit(0)
+        except Exception as e:
+            print("Error during building model:")
+            print(traceback.format_exc())
+            print("Skipping")

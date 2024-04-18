@@ -41,15 +41,18 @@ def create_submission(model):
     pred = np.array([])
 
     for X, Y in val_loader:
+        print(".", end="")
+        sys.stdout.flush()
         X = X.to(device)
         Y = Y.to(device)
         pred = np.concatenate((pred, model(X).cpu().detach().numpy().argmax(axis=1)))
+    print()
     # pred = pred.cpu().detach().numpy().argmax(axis=1)
     print(pred)
     submission = pd.DataFrame({"Id": val_dataset.img_labels.iloc[:, 0], "main_type": pred})
     submission.to_csv("./submission_last.csv", index=False)
 
 if __name__ == "__main__":
-    model = torch.load(sys.argv[1])
+    model = torch.load(sys.argv[1], map_location=device)
     create_submission(model)
     print("Submission created.")
