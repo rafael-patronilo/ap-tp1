@@ -115,7 +115,7 @@ def save_last_n(model, name, n):
         old_file = f"{name}_{i-1}.pth"
         file = f"{name}_{i}.pth"
         if os.path.isfile(file):
-            os.rename(old_file, file)
+            os.rename(file, old_file)
     torch.save(model, f"{name}_0.pth")
 
 def evaluate(model, loss_fn, loader):
