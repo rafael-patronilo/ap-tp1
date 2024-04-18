@@ -200,7 +200,7 @@ def train_fine_tuning(
                 with open(f"{name}.txt", "a") as f:
                     f.write(f"Epoch: {epoch}, Best F1-score: {f_score}\n")
             tsf = time.time()
-            eta = (EPOCHS_PER_MODEL - epoch) * (tsf - tsi)
+            eta = (epochs - epoch) * (tsf - tsi)
             print(convert_seconds(eta))
             last_epoch = epoch
         print("Finished training {name}")
