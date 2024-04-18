@@ -175,6 +175,7 @@ def train_fine_tuning(
         optimizer = torch.optim.SGD(
             model.parameters(), lr=learning_rate, weight_decay=0.001
         )
+    last_epoch = -1
     # epoch = 0
     best_f_score = None
     try:
@@ -201,13 +202,14 @@ def train_fine_tuning(
             tsf = time.time()
             eta = (EPOCHS_PER_MODEL - epoch) * (tsf - tsi)
             print(convert_seconds(eta))
+            last_epoch = epoch
         print("Finished training {name}")
         print("Saving model")
         save_last_n(model, f"training_{name}", 1)
 
     except KeyboardInterrupt:
         print("Training stopped, saving current model")
-        save_last_n(model, f"training_{name}", 2)
+        save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
         cmd = input("If you want to exit, type q. Otherwise, hit enter.")
         if cmd == "q":
             exit(0)
@@ -215,7 +217,8 @@ def train_fine_tuning(
         print("Error during training:")
         print(traceback.format_exc())
         print("Saving model")
-        save_last_n(model, f"training_{name}", 2)
+        save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
+    save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
 
 
 models = [
