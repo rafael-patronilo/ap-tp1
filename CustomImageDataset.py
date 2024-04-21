@@ -5,7 +5,7 @@ from torchvision.io import read_image
 import os
 import pandas as pd
 import numpy as np
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Subset
 import matplotlib.pyplot as plt
 
 
@@ -100,6 +100,22 @@ class CustomImageDataset(Dataset):
         plt.axis("off")
         plt.title(self.img_labels.iloc[idx, 1])
         plt.show()
+
+    def class_split(self, factor, random_state=np.random.RandomState()):
+        def shuffle_and_select(group, slice_size):
+            shuffled_group = group.sample(
+                frac=1, random_state=random_state
+            )  # Shuffle the group
+            slice_a = shuffled_group.iloc[:slice_size]
+            slice_b = shuffled_group.iloc[slice_size:]
+            return slice_a.index, slice_b.index
+
+        tuples = self.img_labels.groupby("main_type").apply(
+            lambda x: shuffle_and_select(x, int(len(x) * factor))
+        )
+        indices_a = np.concatenate([tup[0] for tup in tuples])
+        indices_b = np.concatenate([tup[1] for tup in tuples])
+        return Subset(self, indices_a), Subset(self, indices_b)
 
     def show_all(self):
         for idx in range(len(self.img_labels)):

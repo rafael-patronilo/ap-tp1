@@ -3,3 +3,4 @@ __pycache__/
 *.zip
 *submission*.csv
 *.pth
+data/images/image_aug/

@@ -60,8 +60,8 @@ def split_training_set(seed_source=57473):
 
     seed = custom_hash(seed_source)
     print(f"Splitting training set using seed {seed} from {seed_source}")
-    train_dataset, test_dataset = torch.utils.data.random_split(
-        orig_train_dataset, [0.7, 0.3], generator=torch.Generator().manual_seed(seed)
+    train_dataset, test_dataset = orig_train_dataset.class_split(
+        0.7, random_state=np.random.RandomState(seed)
     )
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=64, shuffle=True
@@ -128,7 +128,7 @@ def evaluate(model, loss_fn, loader):
     with torch.no_grad():
         model.eval()
         test_loss, correct = 0, 0
-        f_score = MulticlassF1Score(num_classes=18, average='macro', device=device)
+        f_score = MulticlassF1Score(num_classes=18, average="macro", device=device)
 
         for X, y in loader:
             print(".", end="")
