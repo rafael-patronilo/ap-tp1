@@ -1,0 +1,14 @@
+
+
+Epoch: 0, F1-score: 0.07139258086681366
+Epoch: 0, Best F1-score: 0.07139258086681366
+Epoch: 1, Best F1-score: 0.2679583430290222
+Epoch: 0, F1-score: 0.3495079278945923
+Epoch: 0, Best F1-score: 0.3495079278945923
+Epoch: 1, Best F1-score: 0.37466010451316833
+Epoch: 0, F1-score: 0.37068086862564087
+Epoch: 0, Best F1-score: 0.37068086862564087
+Epoch: 1, Best F1-score: 0.37474197149276733
+Epoch: 0, F1-score: 0.37901225686073303
+Epoch: 0, Best F1-score: 0.37901225686073303
+Epoch: 1, Best F1-score: 0.39984238147735596

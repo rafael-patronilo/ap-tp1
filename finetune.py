@@ -8,10 +8,11 @@ from torch import nn
 import torchvision
 import traceback
 import time
+import optuna
 
 # from torchsummary import summary
 
-EPOCHS_PER_MODEL = 50
+EPOCHS_PER_MODEL = 2
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
@@ -199,7 +200,7 @@ def train_fine_tuning(
                 with open(f"{name}.txt", "a") as f:
                     f.write(f"Epoch: {epoch}, Best F1-score: {f_score}\n")
             tsf = time.time()
-            eta = (epochs - epoch) * (tsf - tsi)
+            eta = (epochs - 1 - epoch) * (tsf - tsi)
             print(convert_seconds(eta))
             last_epoch = epoch
         print("Finished training {name}")
@@ -218,6 +219,84 @@ def train_fine_tuning(
         print("Saving model")
         save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
     save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
+
+
+def objective(
+    trial, name, model, param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
+):
+    split_training_set(name)
+    loss_fn = nn.CrossEntropyLoss(
+        weight=orig_train_dataset.get_class_weights_tensor().to(device)
+    )
+
+    # Define hyperparameters using trial object
+    learning_rate = trial.suggest_loguniform("lr", 1e-5, 1e-1)
+    weight_decay = trial.suggest_loguniform("weight_decay", 1e-5, 1e-1)
+
+    optimizer = None
+    if param_group:
+        params_1x = [
+            param
+            for name, param in model.named_parameters()
+            if name not in ["fc.weight", "fc.bias"]
+        ]
+        optimizer = torch.optim.SGD(
+            [
+                {"params": params_1x},
+                {"params": model.fc.parameters(), "lr": learning_rate * 10},
+            ],
+            lr=learning_rate,
+            weight_decay=0.001,
+        )
+    else:
+        optimizer = torch.optim.SGD(
+            model.parameters(), lr=learning_rate, weight_decay=weight_decay
+        )
+
+    last_epoch = -1
+    best_f_score = None
+    try:
+        for epoch in range(from_epoch, epochs):
+            tsi = time.time()
+            print(f"Epoch: {epoch}")
+
+            loss, accuracy, f_score = train(
+                train_loader, test_loader, model, loss_fn, optimizer
+            )
+            if epoch % 25 == 0:
+                print("Saving model")
+                save_last_n(model, f"training_{name}", 1)
+                with open(f"{name}.txt", "a") as f:
+                    f.write(f"Epoch: {epoch}, F1-score: {f_score}\n")
+            if best_f_score is None or f_score > best_f_score:
+                best_f_score = f_score
+                print("New best model found")
+                save_last_n(model, f"training_best_{name}", 1)
+                with open(f"{name}.txt", "a") as f:
+                    f.write(f"Epoch: {epoch}, Best F1-score: {f_score}\n")
+            tsf = time.time()
+            eta = (epochs - 1 - epoch) * (tsf - tsi)
+            print(convert_seconds(eta))
+            last_epoch = epoch
+        print("Finished training {name}")
+        print("Saving model")
+        save_last_n(model, f"training_{name}", 1)
+
+    except KeyboardInterrupt:
+        print("Training stopped, saving current model")
+        save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
+        cmd = input("If you want to exit, type q. Otherwise, hit enter.")
+        if cmd == "q":
+            return best_f_score
+    except Exception:
+        print("Error during training:")
+        print(traceback.format_exc())
+        print("Saving model")
+        save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
+        return best_f_score
+    save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
+
+    return best_f_score
 
 
 models = [
@@ -248,7 +327,15 @@ if __name__ == "__main__":
             prepare_pretrained_model(model)
             model.to(device)
             # print(summary(model, (3, 300, 400)))
-            train_fine_tuning(name, model, 0.001, param_group=True)
+
+            # Create a study object and optimize it
+            study = optuna.create_study(direction="maximize")
+            study.optimize(lambda trial: objective(trial, name, model), n_trials=100)
+
+            best_params = study.best_params
+            print(f"Best hyperparameters: {best_params}")
+
+            # train_fine_tuning(name, model, 0.001, param_group=True)
         except KeyboardInterrupt:
             cmd = input("If you want to exit, type q. Otherwise, hit enter.")
             if cmd == "q":

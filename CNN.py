@@ -5,7 +5,6 @@ import torch.optim as optim
 import sys
 import os
 from torcheval.metrics import MulticlassF1Score
-from torch.utils.data import SubsetRandomSampler
 from torch import nn
 import pandas as pd
 import itertools
@@ -53,9 +52,10 @@ def make_model():
 
     return model
 
+
 def make_vgg(vgg_blocks, linear_layers):
     layers = []
-    for (num_convs, out_channels) in vgg_blocks:
+    for num_convs, out_channels in vgg_blocks:
         if num_convs > 0:
             for _ in range(num_convs):
                 layers.append(nn.LazyConv2d(out_channels, kernel_size=3, padding=1))
@@ -70,6 +70,7 @@ def make_vgg(vgg_blocks, linear_layers):
     layers.append(nn.LazyLinear(18))
     return nn.Sequential(nn.LayerNorm([3, 300, 400]), *layers)
 
+
 def test_vgg(vgg_blocks, linear_layers):
     model = make_vgg(vgg_blocks, linear_layers)
     optimizer = optim.Adam(
@@ -82,22 +83,37 @@ def test_vgg(vgg_blocks, linear_layers):
     accuracy = None
     f_score = None
     for epoch in range(epochs):
-        print(f"Epoch: {epoch} for {tuple(*vgg_blocks)} VGG blocks and {linear_layers} linear layers")
+        print(
+            f"Epoch: {epoch} for {tuple(*vgg_blocks)} VGG blocks and {linear_layers} linear layers"
+        )
         loss, accuracy, f_score = train(
             train_loader, test_loader, model, loss_fn, optimizer
         )
     return model, loss, accuracy, f_score
 
+
 def test_vgg_architectures():
     print("-" * 196)
+    best_f_score = 0
     out_channels = [16, 32, 64, 128, 256, 512, 512]
+
     def neuron_count(architecture):
         conv_numbers, linear_layers = architecture
-        return sum(linear_layers) + sum(out*count for out, count in zip(out_channels, conv_numbers))
-    all_conv_numbers = [x for x in itertools.product(range(4), repeat=len(out_channels)) 
-                        if sum(x) >= 1 and sum(1 for y in x if y > 0) >= 2]
+        return sum(linear_layers) + sum(
+            out * count for out, count in zip(out_channels, conv_numbers)
+        )
+
+    all_conv_numbers = [
+        x
+        for x in itertools.product(range(4), repeat=len(out_channels))
+        if sum(x) >= 1 and sum(1 for y in x if y > 0) >= 2
+    ]
     linear_layer_sizes = [32, 64, 128, 256, 1024, 4096]
-    all_linear_layers = [x for layer_size in linear_layer_sizes for x in [[layer_size], [layer_size, layer_size]]]
+    all_linear_layers = [
+        x
+        for layer_size in linear_layer_sizes
+        for x in [[layer_size], [layer_size, layer_size]]
+    ]
     all_linear_layers.append([])
     architectures = list(itertools.product(all_conv_numbers, all_linear_layers))
     architectures.sort(key=neuron_count)
@@ -111,7 +127,7 @@ def test_vgg_architectures():
             save_last_n(model, "best_vgg", 3)
         print(f"Best f_score so far: {best_f_score}")
         print("-" * 196)
-        
+
 
 def train(train_loader, test_loader, model, loss_fn, optimizer):
     size = len(train_loader.dataset)
@@ -133,15 +149,11 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
         # loss, current = loss.item(), ((batch )*64+ len(X) )if not len(X)== 64 else (batch+1)*len(X)
         # print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
     print()
-    test_loss, accuracy, f_score = evaluate(
-        model, loss_fn, train_loader
-    )
+    test_loss, accuracy, f_score = evaluate(model, loss_fn, train_loader)
     print(
         f"Train Error: \n Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
     )
-    test_loss, accuracy, f_score = evaluate(
-        model, loss_fn, test_loader
-    )
+    test_loss, accuracy, f_score = evaluate(model, loss_fn, test_loader)
     print(
         f"Test Error: \n Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
     )
@@ -169,28 +181,22 @@ def evaluate(model, loss_fn, loader):
     return test_loss, accuracy, f_score
 
 
-#total_size = len(train_loader.dataset)
+# total_size = len(train_loader.dataset)
 # indices = list(range(total_size))
-#split = int(0.7 * total_size)
-#indices = np.arange(total_size)
-#train_indices = indices[:split]
-#test_indices = indices[split:]
+# split = int(0.7 * total_size)
+# indices = np.arange(total_size)
+# train_indices = indices[:split]
+# test_indices = indices[split:]
 train_dataset, test_dataset = torch.utils.data.random_split(
-    train_loader.dataset, 
-    [0.7, 0.3], 
-    generator=torch.Generator().manual_seed(42)
+    train_loader.dataset, [0.7, 0.3], generator=torch.Generator().manual_seed(42)
 )
 
 # Creating PT data samplers and loaders:
-#train_sampler = SubsetRandomSampler(train_indices)
-#test_sampler = SubsetRandomSampler(test_indices)
+# train_sampler = SubsetRandomSampler(train_indices)
+# test_sampler = SubsetRandomSampler(test_indices)
 
-train_loader = torch.utils.data.DataLoader(
-    train_dataset, batch_size=64, shuffle=True
-)
-test_loader = torch.utils.data.DataLoader(
-    test_dataset, batch_size=64, shuffle=True
-)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=True)
 
 
 def save_last_n(model, name, n):
@@ -253,8 +259,9 @@ def train_indefinitely(model):
         print("Saving current model")
         save_last_n(model, "training_mlp", 4)
 
+
 def create_submission(model):
-    #model = torch.load("training_mlp_0.pth")
+    # model = torch.load("training_mlp_0.pth")
     model.eval()
     model.to(device)
     # pred = torch.tensor([])
@@ -266,12 +273,15 @@ def create_submission(model):
         pred = np.concatenate((pred, model(X).cpu().detach().numpy().argmax(axis=1)))
     # pred = pred.cpu().detach().numpy().argmax(axis=1)
     print(pred)
-    submission = pd.DataFrame({"Id": val_dataset.img_labels.iloc[:, 0], "main_type": pred})
+    submission = pd.DataFrame(
+        {"Id": val_dataset.img_labels.iloc[:, 0], "main_type": pred}
+    )
     submission.to_csv("./submission_last.csv", index=False)
+
 
 # test_mlp_architectures()
 # train_indefinitely(torch.load("best_mlp_0.pth"))
 test_vgg_architectures()
 
-#create_submission(torch.load("best_mlp_0.pth"))
-#create_submission(torch.load("training_mlp_0.pth"))
+# create_submission(torch.load("best_mlp_0.pth"))
+# create_submission(torch.load("training_mlp_0.pth"))
