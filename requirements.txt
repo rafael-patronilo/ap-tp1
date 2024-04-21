@@ -3,4 +3,3 @@ pandas
 torchvision
 matplotlib
 numpy
-os

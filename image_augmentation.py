@@ -44,7 +44,7 @@ for index, row in df.iterrows():
         with Image.open(os.path.join(input_path, image_name + ".png")) as img:
             if type_count[row["main_type"]] <= 600:
                 type_count[row["main_type"]] += 1
-                img.save(output_path_images + f"{image_name}.jpg")
+                img.save(output_path_images + f"{image_name}.png")
                 data_to_append = {
                     "image_id": [f"{image_name}"],
                     "main_type": [row["main_type"]],
@@ -55,7 +55,7 @@ for index, row in df.iterrows():
             if type_count[row["main_type"]] <= 600:
                 type_count[row["main_type"]] += 1
                 rotated = img.rotate(180)
-                rotated.save(output_path_images + f"{image_name}_rotated.jpg")
+                rotated.save(output_path_images + f"{image_name}_rotated.png")
                 data_to_append = {
                     "image_id": [f"{image_name}_rotated"],
                     "main_type": [row["main_type"]],
@@ -67,7 +67,7 @@ for index, row in df.iterrows():
                 type_count[row["main_type"]] += 1
                 horizontal_flipped = img.transpose(Image.FLIP_LEFT_RIGHT)
                 horizontal_flipped.save(
-                    output_path_images + f"{image_name}_horizontal_flipped.jpg"
+                    output_path_images + f"{image_name}_horizontal_flipped.png"
                 )
                 data_to_append = {
                     "image_id": [f"{image_name}_horizontal_flipped"],
@@ -80,7 +80,7 @@ for index, row in df.iterrows():
                 type_count[row["main_type"]] += 1
                 vertical_flipped = img.transpose(Image.FLIP_TOP_BOTTOM)
                 vertical_flipped.save(
-                    output_path_images + f"{image_name}_vertical_flipped.jpg"
+                    output_path_images + f"{image_name}_vertical_flipped.png"
                 )
                 data_to_append = {
                     "image_id": [f"{image_name}_vertical_flipped"],

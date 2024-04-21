@@ -1,20 +1,15 @@
 import CustomImageDataset as CID
 import torch
 import numpy as np
-import torch.optim as optim
 import sys
 import os
 from torcheval.metrics import MulticlassF1Score
-from torch.utils.data import SubsetRandomSampler
 from torch import nn
 import torchvision
-import pandas as pd
-import itertools
 import traceback
 import time
 
 # from torchsummary import summary
-import gc
 
 EPOCHS_PER_MODEL = 50
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -32,8 +27,8 @@ preprocess = torchvision.transforms.Compose(
 )
 
 orig_train_dataset = CID.CustomImageDataset(
-    annotations_file="./data/images/images/train.csv",
-    img_dir="./data/images/images/train/",
+    annotations_file="./data/images/image_aug/train.csv",
+    img_dir="./data/images/image_aug/images/",
     transform=preprocess,
 )
 
@@ -157,7 +152,9 @@ def train_fine_tuning(
     name, model, learning_rate, param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
 ):
     split_training_set(name)
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.CrossEntropyLoss(
+        weight=orig_train_dataset.get_class_weights_tensor().to(device)
+    )
     optimizer = None
     if param_group:
         params_1x = [
@@ -215,7 +212,7 @@ def train_fine_tuning(
         cmd = input("If you want to exit, type q. Otherwise, hit enter.")
         if cmd == "q":
             exit(0)
-    except Exception as e:
+    except Exception:
         print("Error during training:")
         print(traceback.format_exc())
         print("Saving model")
@@ -230,7 +227,7 @@ models = [
     # ("regnet_x_800mf", lambda: torchvision.models.regnet_x_800mf(pretrained=True)),
     # ("regnet_y_800mf", lambda: torchvision.models.regnet_y_800mf(pretrained=True)),
     # ("regnet_x_1_6gf", lambda: torchvision.models.regnet_x_1_6gf(pretrained=True)),
-    ("googlenet", lambda: torchvision.models.googlenet(pretrained=True)),
+    # ("googlenet", lambda: torchvision.models.googlenet(pretrained=True)),
     ("resnet18", lambda: torchvision.models.resnet18(pretrained=True)),
 ]
 
@@ -256,7 +253,7 @@ if __name__ == "__main__":
             cmd = input("If you want to exit, type q. Otherwise, hit enter.")
             if cmd == "q":
                 exit(0)
-        except Exception as e:
+        except Exception:
             print("Error during building model:")
             print(traceback.format_exc())
             print("Skipping")

@@ -181,9 +181,3 @@ def train_indefinitely(model):
         print(f"An error occurred: {e}")
         print("Saving current model")
         save_last_n(model, "training_mlp", 4)
-
-
-submission = pd.DataFrame(
-    {"Id": test_dataset.img_labels.iloc[:, 0], "main_type": y_pred_tensor}
-)
-submission.to_csv("./submission.csv", index=False)
