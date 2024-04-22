@@ -155,6 +155,10 @@ def convert_seconds(total_seconds):
 def train_fine_tuning(
     name, model, learning_rate=0.001, weight_decay=0.001, other_seed_data="", param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
 ):
+    if not learning_rate is float:
+        learning_rate = float(learning_rate)
+    if not weight_decay is float:
+        weight_decay = float(weight_decay)
     split_training_set(name + other_seed_data)
     print(f"LR = {learning_rate}, WD = {weight_decay}")
     loss_fn = nn.CrossEntropyLoss(
