@@ -8,7 +8,6 @@ from torch import nn
 import torchvision
 import traceback
 import time
-import optuna
 
 # from torchsummary import summary
 best_f_score = 0.0
