@@ -275,7 +275,7 @@ if __name__ == "__main__":
             model.to(device)
             # print(summary(model, (3, 300, 400)))
             
-            kargs = {arg[0]:arg[1] for arg in sys.argv[1:]}
+            kargs = {arg[0]:arg[1] for arg in (arg.split("=") for arg in sys.argv[1:])}
 
             train_fine_tuning(name, model, param_group=True, **kargs)
         except KeyboardInterrupt:
