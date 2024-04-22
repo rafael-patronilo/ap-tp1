@@ -159,6 +159,10 @@ def train_fine_tuning(
         learning_rate = float(learning_rate)
     if not weight_decay is float:
         weight_decay = float(weight_decay)
+    if not epochs is int:
+        epochs = int(epochs)
+    if not from_epoch is int:
+        from_epoch = int(from_epoch)
     split_training_set(name + other_seed_data)
     print(f"LR = {learning_rate}, WD = {weight_decay}")
     loss_fn = nn.CrossEntropyLoss(
