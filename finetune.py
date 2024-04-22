@@ -20,7 +20,7 @@ preprocess = torchvision.transforms.Compose(
     [
         torchvision.transforms.RandomHorizontalFlip(p=0.33),
         torchvision.transforms.RandomVerticalFlip(p=0.33),
-        torchvision.transforms.RandomApply([torchvision.transforms.RandomRotation((180,180), p=0.33)]),
+        torchvision.transforms.RandomApply([torchvision.transforms.RandomRotation((180,180))],  p=0.33),
         torchvision.transforms.Normalize(
             mean=[0.0, 0.0, 0.0], std=[255.0, 255.0, 255.0]
         ),
