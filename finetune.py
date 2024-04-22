@@ -31,7 +31,7 @@ preprocess = torchvision.transforms.Compose(
 )
 
 orig_train_dataset = CID.CustomImageDataset(
-    annotations_file="./data/images/train.csv",
+    annotations_file="./data/images/images/train.csv",
     img_dir="./data/images/images/train/",
     transform=preprocess,
 )
