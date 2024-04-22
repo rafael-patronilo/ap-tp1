@@ -18,6 +18,9 @@ print(device)
 
 preprocess = torchvision.transforms.Compose(
     [
+        torchvision.transforms.RandomHorizontalFlip(p=0.33),
+        torchvision.transforms.RandomVerticalFlip(p=0.33),
+        torchvision.transforms.RandomApply([torchvision.transforms.RandomRotation((180,180), p=0.33)]),
         torchvision.transforms.Normalize(
             mean=[0.0, 0.0, 0.0], std=[255.0, 255.0, 255.0]
         ),
@@ -28,8 +31,8 @@ preprocess = torchvision.transforms.Compose(
 )
 
 orig_train_dataset = CID.CustomImageDataset(
-    annotations_file="./data/images/image_aug/train.csv",
-    img_dir="./data/images/image_aug/images/",
+    annotations_file="./data/images/train.csv",
+    img_dir="./data/images/images/train/",
     transform=preprocess,
 )
 
