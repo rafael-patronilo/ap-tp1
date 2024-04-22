@@ -1,5 +1,7 @@
 from finetune import *
 
+
+
 models = [
     # ("alexnet", lambda : torchvision.models.alexnet(pretrained=True)),
     # ("regnet_y_400mf", lambda: torchvision.models.regnet_y_400mf(pretrained=True)),

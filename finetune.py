@@ -12,7 +12,8 @@ import optuna
 
 # from torchsummary import summary
 best_f_score = 0.0
-EPOCHS_PER_MODEL = 2
+EPOCHS_PER_MODEL = 30
+EPOCHS_PER_TRIAL = 2
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
@@ -228,7 +229,7 @@ def train_fine_tuning(
 
 
 def objective(
-    trial, name, builder, param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
+    trial, name, builder, param_group=True, from_epoch=0, epochs=EPOCHS_PER_TRIAL
 ):
     model = builder()
     
