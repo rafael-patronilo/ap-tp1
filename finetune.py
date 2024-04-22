@@ -219,9 +219,9 @@ def train_fine_tuning(
 
 
 def objective(
-    trial, name, model, param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
+    trial, name, builder, param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
 ):
-    split_training_set(name)
+    model = builder()
     loss_fn = nn.CrossEntropyLoss(
         weight=orig_train_dataset.get_class_weights_tensor().to(device)
     )
@@ -318,14 +318,17 @@ if __name__ == "__main__":
         print("=" * 100)
         print("=" * 100)
         try:
-            model = builder()
-            prepare_pretrained_model(model)
-            model.to(device)
+            split_training_set(name)
+            def prepare_builder():
+                model = builder()
+                prepare_pretrained_model(model)
+                model.to(device)
+                return model
             # print(summary(model, (3, 300, 400)))
 
             # Create a study object and optimize it
             study = optuna.create_study(direction="maximize")
-            study.optimize(lambda trial: objective(trial, name, model), n_trials=100)
+            study.optimize(lambda trial: objective(trial, name, prepare_builder), n_trials=100)
 
             best_params = study.best_params
             print(f"Best hyperparameters: {best_params}")
