@@ -235,7 +235,7 @@ def objective(
     # Define hyperparameters using trial object
     learning_rate = trial.suggest_loguniform("lr", 1e-5, 1e-1)
     weight_decay = trial.suggest_loguniform("weight_decay", 1e-5, 1e-1)
-    train_fine_tuning(name=name, 
+    return train_fine_tuning(name=name, 
                       model=model, 
                       other_seed_data=f"_trial{trial.number}",
                       learning_rate=learning_rate, 
