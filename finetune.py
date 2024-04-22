@@ -153,9 +153,10 @@ def convert_seconds(total_seconds):
 
 
 def train_fine_tuning(
-    name, model, learning_rate, param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
+    name, model, learning_rate=0.001, weight_decay=0.001, other_seed_data="", param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
 ):
-    split_training_set(name)
+    split_training_set(name + other_seed_data)
+    print(f"LR = {learning_rate}, WD = {weight_decay}")
     loss_fn = nn.CrossEntropyLoss(
         weight=orig_train_dataset.get_class_weights_tensor().to(device)
     )
@@ -176,9 +177,10 @@ def train_fine_tuning(
         )
     else:
         optimizer = torch.optim.SGD(
-            model.parameters(), lr=learning_rate, weight_decay=0.001
+            model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
     last_epoch = -1
+    f_score = 0.0
     # epoch = 0
     best_f_score = None
     try:
@@ -218,83 +220,25 @@ def train_fine_tuning(
         print(traceback.format_exc())
         print("Saving model")
         save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
-    save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
+    return f_score
 
 
 def objective(
     trial, name, builder, param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
 ):
     model = builder()
-    loss_fn = nn.CrossEntropyLoss(
-        weight=orig_train_dataset.get_class_weights_tensor().to(device)
-    )
-
+    
     # Define hyperparameters using trial object
     learning_rate = trial.suggest_loguniform("lr", 1e-5, 1e-1)
     weight_decay = trial.suggest_loguniform("weight_decay", 1e-5, 1e-1)
-
-    optimizer = None
-    if param_group:
-        params_1x = [
-            param
-            for name, param in model.named_parameters()
-            if name not in ["fc.weight", "fc.bias"]
-        ]
-        optimizer = torch.optim.SGD(
-            [
-                {"params": params_1x},
-                {"params": model.fc.parameters(), "lr": learning_rate * 10},
-            ],
-            lr=learning_rate,
-            weight_decay=0.001,
-        )
-    else:
-        optimizer = torch.optim.SGD(
-            model.parameters(), lr=learning_rate, weight_decay=weight_decay
-        )
-
-    last_epoch = -1
-    global best_f_score
-    try:
-        for epoch in range(from_epoch, epochs):
-            tsi = time.time()
-            print(f"Epoch: {epoch}")
-
-            loss, accuracy, f_score = train(
-                train_loader, test_loader, model, loss_fn, optimizer
-            )
-
-            print("Saving model")
-            save_last_n(model, f"training_{name}", 1)
-            with open(f"{name}.txt", "a") as f:
-                f.write(f"Epoch: {epoch}, F1-score: {f_score}\n")
-            if best_f_score is None or f_score > best_f_score:
-                best_f_score = f_score
-                print("New best model found")
-                save_last_n(model, f"training_best_{name}", 1)
-                with open(f"{name}.txt", "a") as f:
-                    f.write(f"Epoch: {epoch}, Best F1-score: {f_score}\n")
-            tsf = time.time()
-            eta = (epochs - 1 - epoch) * (tsf - tsi)
-            print(convert_seconds(eta))
-            last_epoch = epoch
-        print("Best f.score is ", best_f_score)
-
-    except KeyboardInterrupt:
-        print("Training stopped, saving current model")
-        save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
-        cmd = input("If you want to exit, type q. Otherwise, hit enter.")
-        if cmd == "q":
-            return best_f_score
-    except Exception:
-        print("Error during training:")
-        print(traceback.format_exc())
-        print("Saving model")
-        save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
-        return best_f_score
-    save_last_n(model, f"training_{name}_epoch_{last_epoch}", 1)
-
-    return best_f_score
+    train_fine_tuning(name=name, 
+                      model=model, 
+                      other_seed_data=f"_trial{trial.number}",
+                      learning_rate=learning_rate, 
+                      weight_decay=weight_decay, 
+                      param_group=param_group, 
+                      from_epoch=from_epoch, 
+                      epochs=epochs)
 
 
 models = [
@@ -321,22 +265,15 @@ if __name__ == "__main__":
         print("=" * 100)
         print("=" * 100)
         try:
-            split_training_set(name)
-            def prepare_builder():
-                model = builder()
-                prepare_pretrained_model(model)
-                model.to(device)
-                return model
+                
+            model = builder()
+            prepare_pretrained_model(model)
+            model.to(device)
             # print(summary(model, (3, 300, 400)))
+            
+            kargs = {arg[0]:arg[1] for arg in sys.argv[1:]}
 
-            # Create a study object and optimize it
-            study = optuna.create_study(direction="maximize")
-            study.optimize(lambda trial: objective(trial, name, prepare_builder), n_trials=100)
-
-            best_params = study.best_params
-            print(f"Best hyperparameters: {best_params}")
-
-            # train_fine_tuning(name, model, 0.001, param_group=True)
+            train_fine_tuning(name, model, param_group=True, **kargs)
         except KeyboardInterrupt:
             cmd = input("If you want to exit, type q. Otherwise, hit enter.")
             if cmd == "q":
