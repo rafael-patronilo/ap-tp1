@@ -60,7 +60,7 @@ def split_training_set(seed_source=57473):
     seed = custom_hash(seed_source)
     print(f"Splitting training set using seed {seed} from {seed_source}")
     train_dataset, test_dataset = orig_train_dataset.class_split(
-        0.7, random_state=np.random.RandomState(seed)
+        0.7, random=np.random.default_rng(seed)
     )
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=64, shuffle=True

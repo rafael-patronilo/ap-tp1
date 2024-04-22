@@ -32,6 +32,7 @@ class CustomImageDataset(Dataset):
         self.classes = [each_class.lower() for each_class in classes]
         self.class2idx = {self.classes[i].lower(): i for i in range(len(self.classes))}
         self.idx2class = {i: self.classes[i].lower() for i in range(len(self.classes))}
+        self.per_class = [grouping for grouping in self.img_labels.groupby("main_type")]
 
     def __len__(self):
         return len(self.img_labels)
@@ -101,18 +102,17 @@ class CustomImageDataset(Dataset):
         plt.title(self.img_labels.iloc[idx, 1])
         plt.show()
 
-    def class_split(self, factor, random_state=np.random.RandomState()):
+    def class_split(self, factor, random=np.random.default_rng()):
         def shuffle_and_select(group, slice_size):
             shuffled_group = group.sample(
-                frac=1, random_state=random_state
+                frac=1, random_state=random
             )  # Shuffle the group
             slice_a = shuffled_group.iloc[:slice_size]
             slice_b = shuffled_group.iloc[slice_size:]
             return slice_a.index, slice_b.index
 
-        tuples = self.img_labels.groupby("main_type").apply(
-            lambda x: shuffle_and_select(x, int(len(x) * factor))
-        )
+        tuples = [shuffle_and_select(group, int(len(group) * factor)) for _name, group in self.per_class]
+        random.shuffle(tuples)
         indices_a = np.concatenate([tup[0] for tup in tuples])
         indices_b = np.concatenate([tup[1] for tup in tuples])
         return Subset(self, indices_a), Subset(self, indices_b)
