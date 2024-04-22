@@ -11,7 +11,7 @@ import time
 import optuna
 
 # from torchsummary import summary
-
+best_f_score = 0.0
 EPOCHS_PER_MODEL = 2
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
@@ -203,9 +203,6 @@ def train_fine_tuning(
             eta = (epochs - 1 - epoch) * (tsf - tsi)
             print(convert_seconds(eta))
             last_epoch = epoch
-        print("Finished training {name}")
-        print("Saving model")
-        save_last_n(model, f"training_{name}", 1)
 
     except KeyboardInterrupt:
         print("Training stopped, saving current model")
@@ -254,7 +251,7 @@ def objective(
         )
 
     last_epoch = -1
-    best_f_score = None
+    global best_f_score
     try:
         for epoch in range(from_epoch, epochs):
             tsi = time.time()
@@ -263,11 +260,11 @@ def objective(
             loss, accuracy, f_score = train(
                 train_loader, test_loader, model, loss_fn, optimizer
             )
-            if epoch % 25 == 0:
-                print("Saving model")
-                save_last_n(model, f"training_{name}", 1)
-                with open(f"{name}.txt", "a") as f:
-                    f.write(f"Epoch: {epoch}, F1-score: {f_score}\n")
+
+            print("Saving model")
+            save_last_n(model, f"training_{name}", 1)
+            with open(f"{name}.txt", "a") as f:
+                f.write(f"Epoch: {epoch}, F1-score: {f_score}\n")
             if best_f_score is None or f_score > best_f_score:
                 best_f_score = f_score
                 print("New best model found")
@@ -278,9 +275,7 @@ def objective(
             eta = (epochs - 1 - epoch) * (tsf - tsi)
             print(convert_seconds(eta))
             last_epoch = epoch
-        print("Finished training {name}")
-        print("Saving model")
-        save_last_n(model, f"training_{name}", 1)
+        print("Best f.score is ", best_f_score)
 
     except KeyboardInterrupt:
         print("Training stopped, saving current model")
