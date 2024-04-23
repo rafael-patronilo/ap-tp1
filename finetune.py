@@ -250,7 +250,7 @@ def objective(
 ):
     def stop_criterion(test_metrics, train_metrics):
         MIN_FSCORE = 0.05
-        MAX_GENERALIZATION_GAP = 0.1
+        MAX_GENERALIZATION_GAP = 0.15
         loss, accuracy, f_score = test_metrics
         train_loss, train_accuracy, train_f_score = train_metrics
         generalization_gap = f_score - train_f_score
