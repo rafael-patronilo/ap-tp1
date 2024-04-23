@@ -12,7 +12,7 @@ import time
 # from torchsummary import summary
 best_f_score = 0.0
 EPOCHS_PER_MODEL = 30
-EPOCHS_PER_TRIAL = 2
+EPOCHS_PER_TRIAL = 25
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
