@@ -98,16 +98,18 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
         optimizer.zero_grad()
     print()
     print("Train Error:")
-    test_loss, accuracy, f_score = evaluate(model, loss_fn, train_loader)
+    train_metrics = evaluate(model, loss_fn, train_loader)
+    test_loss, accuracy, f_score = train_metrics
     print(
         f"Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
     )
     print("Test Error:")
-    test_loss, accuracy, f_score = evaluate(model, loss_fn, test_loader)
+    test_metrics = evaluate(model, loss_fn, test_loader)
+    test_loss, accuracy, f_score = test_metrics
     print(
         f"Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
     )
-    return test_loss, accuracy, f_score
+    return test_metrics, train_metrics
 
 
 def save_last_n(model, name, n):
@@ -153,7 +155,15 @@ def convert_seconds(total_seconds):
 
 
 def train_fine_tuning(
-    name, model, learning_rate=0.001, weight_decay=0.001, other_seed_data="", param_group=True, from_epoch=0, epochs=EPOCHS_PER_MODEL
+    name, 
+    model, 
+    learning_rate=0.001, 
+    weight_decay=0.001,
+    other_seed_data="", 
+    param_group=True, 
+    from_epoch=0, 
+    epochs=EPOCHS_PER_MODEL,
+    stop_criterion = None
 ):
     if not learning_rate is float:
         learning_rate = float(learning_rate)
@@ -198,9 +208,13 @@ def train_fine_tuning(
 
             # ts stores the time in seconds
 
-            loss, accuracy, f_score = train(
+            test_metrics, train_metrics = train(
                 train_loader, test_loader, model, loss_fn, optimizer
             )
+            loss, accuracy, f_score = test_metrics
+            if stop_criterion is not None and stop_criterion(test_metrics, train_metrics):
+                print("Stopping training")
+                return 0.0
             if epoch % 25 == 0:
                 print("Saving model")
                 save_last_n(model, f"training_{name}", 1)
@@ -234,6 +248,20 @@ def train_fine_tuning(
 def objective(
     trial, name, builder, param_group=True, from_epoch=0, epochs=EPOCHS_PER_TRIAL
 ):
+    def stop_criterion(test_metrics, train_metrics):
+        MIN_FSCORE = 0.05
+        MAX_GENERALIZATION_GAP = 0.1
+        loss, accuracy, f_score = test_metrics
+        train_loss, train_accuracy, train_f_score = train_metrics
+        generalization_gap = f_score - train_f_score
+        stop = False
+        if f_score < MIN_FSCORE:
+            print(f"F1-score too low: {f_score} < {MIN_FSCORE}")
+            stop = True
+        if generalization_gap > MAX_GENERALIZATION_GAP:
+            print(f"Generalization gap too high: {generalization_gap} > {MAX_GENERALIZATION_GAP}")
+            stop = True
+        return stop
     model = builder()
     
     # Define hyperparameters using trial object
@@ -246,7 +274,8 @@ def objective(
                       weight_decay=weight_decay, 
                       param_group=param_group, 
                       from_epoch=from_epoch, 
-                      epochs=epochs)
+                      epochs=epochs,
+                      stop_criterion=stop_criterion)
 
 
 models = [
