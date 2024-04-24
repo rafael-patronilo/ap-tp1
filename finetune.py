@@ -72,9 +72,24 @@ def split_training_set(seed_source=57473):
 
 
 def prepare_pretrained_model(model):
-    model.fc = nn.Linear(model.fc.in_features, 18)
-    nn.init.xavier_uniform_(model.fc.weight)
+    # print(model)
+    # model.fc = nn.Linear(model.fc.in_features, 18)
+    # nn.init.xavier_uniform_(model.fc.weight)
 
+    parent = model
+    last_layer_name = list(model._modules.keys())[-1]
+    last_layer = model._modules[last_layer_name]
+
+    while(len(last_layer._modules) > 0):
+        parent = last_layer
+        last_layer_name = list(parent._modules.keys())[-1]
+        last_layer = parent._modules[last_layer_name]
+
+    last_layer = nn.Linear(last_layer.in_features, 18)
+    nn.init.xavier_uniform_(last_layer.weight)
+    parent._modules[last_layer_name] = last_layer
+    
+    
 
 def train(train_loader, test_loader, model, loss_fn, optimizer):
     size = len(train_loader.dataset)
@@ -290,7 +305,7 @@ models = [
     # ("regnet_x_1_6gf", lambda: torchvision.models.regnet_x_1_6gf(pretrained=True)),
     # ("googlenet", lambda: torchvision.models.googlenet(pretrained=True)),
     # ("resnet18", lambda: torchvision.models.resnet18(pretrained=True)),
-    ("pokedex", lambda: pickle.load(open("pokedex\training_pokedex_savemodel.sav", "rb"))),
+    ("pokedex", lambda: pickle.load(open("pokedex\\training_pokedex_savemodel.sav", "rb"))),
     ("resnet_50_pokemon", lambda: AutoModelForImageClassification.from_pretrained("TeeA/resnet-50-finetuned-pokemon")),
     ("yolov8s-pokemon", lambda: YOLO('keremberke/yolov8m-pokemon-classification'))
 ]
