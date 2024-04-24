@@ -1,3 +1,4 @@
+import pickle
 import CustomImageDataset as CID
 import torch
 import numpy as np
@@ -8,6 +9,8 @@ from torch import nn
 import torchvision
 import traceback
 import time
+from transformers import AutoModelForImageClassification
+from ultralyticsplus import YOLO
 
 # from torchsummary import summary
 best_f_score = 0.0
@@ -286,7 +289,10 @@ models = [
     # ("regnet_y_800mf", lambda: torchvision.models.regnet_y_800mf(pretrained=True)),
     # ("regnet_x_1_6gf", lambda: torchvision.models.regnet_x_1_6gf(pretrained=True)),
     # ("googlenet", lambda: torchvision.models.googlenet(pretrained=True)),
-    ("resnet18", lambda: torchvision.models.resnet18(pretrained=True)),
+    # ("resnet18", lambda: torchvision.models.resnet18(pretrained=True)),
+    ("pokedex", lambda: pickle.load(open("pokedex\training_pokedex_savemodel.sav", "rb"))),
+    ("resnet_50_pokemon", lambda: AutoModelForImageClassification.from_pretrained("TeeA/resnet-50-finetuned-pokemon")),
+    ("yolov8s-pokemon", lambda: YOLO('keremberke/yolov8m-pokemon-classification'))
 ]
 
 if __name__ == "__main__":
