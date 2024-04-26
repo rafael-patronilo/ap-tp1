@@ -10,6 +10,7 @@ import itertools
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+print(device)
 
 
 train_dataset = CID.CustomImageDataset(
@@ -17,7 +18,7 @@ train_dataset = CID.CustomImageDataset(
     img_dir="./data/images/images/train/",
     # transform=preprocess
 )
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=10)
 
 # Load the test set
 val_dataset = CID.CustomImageDataset(
@@ -25,7 +26,7 @@ val_dataset = CID.CustomImageDataset(
     img_dir="./data/images/images/test/",
     # transform=preprocess
 )
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=True)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=True, num_workers=10)
 
 
 def make_model(layer_sizes):
@@ -47,6 +48,8 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
 
     model.train()
     for batch, (X, y) in enumerate(train_loader):
+        print(".", end="")
+        sys.stdout.flush()
         X, y = X.to(device), y.to(device)
         optimizer.zero_grad()
         # y = nn.functional.one_hot(y, num_classes=18)
@@ -60,27 +63,38 @@ def train(train_loader, test_loader, model, loss_fn, optimizer):
         # loss, current = loss.item(), ((batch )*64+ len(X) )if not len(X)== 64 else (batch+1)*len(X)
         # print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
+    print()
+    test_loss, accuracy, f_score = evaluate(model, loss_fn, train_loader)
+    print(
+        f"Train Error: \n Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
+    )
+    test_loss, accuracy, f_score = evaluate(model, loss_fn, test_loader)
+    print(
+        f"Test Error: \n Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
+    )
+    return test_loss, accuracy, f_score
+
+def evaluate(model, loss_fn, loader):
+    total_size = len(loader.dataset)
     with torch.no_grad():
         model.eval()
         test_loss, correct = 0, 0
-        f_score = MulticlassF1Score(device=device)
+        f_score = MulticlassF1Score(device=device, mean='weighted')
 
-        for X, y in test_loader:
+        for X, y in loader:
+            print(".", end="")
+            sys.stdout.flush()
             X, y = X.to(device), y.to(device)
             pred = model(X)
             f_score.update(pred, y)
             test_loss += loss_fn(pred, y).item()
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-
-        test_loss /= len(test_loader)
-        correct /= int(len(test_loader.dataset) * 0.3)
+        print()
+        test_loss /= len(loader)
+        correct /= total_size
         accuracy = 100 * correct
         f_score = f_score.compute()
-        print(
-            f"Test Error: \n Accuracy: {(accuracy):>0.1f}%, Avg loss: {test_loss:>8f}, F1-score: {f_score:>8f} \n"
-        )
     return test_loss, accuracy, f_score
-
 
 total_size = len(train_loader.dataset)
 # indices = list(range(total_size))
@@ -119,7 +133,7 @@ def test_architecture(layer_sizes):
         model.parameters(),
     )
     loss_fn = nn.CrossEntropyLoss()
-    epochs = 15
+    epochs = 2
     model.to(device)
     loss = None
     accuracy = None
@@ -181,3 +195,5 @@ def train_indefinitely(model):
         print(f"An error occurred: {e}")
         print("Saving current model")
         save_last_n(model, "training_mlp", 4)
+
+test_mlp_architectures()

@@ -10,6 +10,7 @@ import pandas as pd
 import itertools
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+print(device)
 
 
 train_dataset = CID.CustomImageDataset(
@@ -17,7 +18,7 @@ train_dataset = CID.CustomImageDataset(
     img_dir="./data/images/images/train/",
     # transform=preprocess
 )
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=10)
 
 # Load the test set
 val_dataset = CID.CustomImageDataset(
@@ -25,7 +26,7 @@ val_dataset = CID.CustomImageDataset(
     img_dir="./data/images/images/test/",
     # transform=preprocess
 )
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=True)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=True, num_workers=10)
 
 
 def make_model():
@@ -165,15 +166,17 @@ def evaluate(model, loss_fn, loader):
     with torch.no_grad():
         model.eval()
         test_loss, correct = 0, 0
-        f_score = MulticlassF1Score(device=device)
+        f_score = MulticlassF1Score(device=device, mean='weighted')
 
         for X, y in loader:
+            print(".", end="")
+            sys.stdout.flush()
             X, y = X.to(device), y.to(device)
             pred = model(X)
             f_score.update(pred, y)
             test_loss += loss_fn(pred, y).item()
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-
+        print()
         test_loss /= len(loader)
         correct /= total_size
         accuracy = 100 * correct
