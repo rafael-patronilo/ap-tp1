@@ -60,7 +60,7 @@ def make_vgg(vgg_blocks, linear_layers):
         if num_convs > 0:
             for _ in range(num_convs):
                 layers.append(nn.LazyConv2d(out_channels, kernel_size=3, padding=1))
-                layers.append(nn.BatchNorm(out_channels))
+                layers.append(nn.BatchNorm2d(out_channels))
                 layers.append(nn.ReLU())
             layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
     layers.append(nn.Flatten())
@@ -78,14 +78,14 @@ def test_vgg(vgg_blocks, linear_layers):
         model.parameters(),
     )
     loss_fn = nn.CrossEntropyLoss()
-    epochs = 15
+    epochs = 2
     model.to(device)
     loss = None
     accuracy = None
     f_score = None
     for epoch in range(epochs):
         print(
-            f"Epoch: {epoch} for {tuple(*vgg_blocks)} VGG blocks and {linear_layers} linear layers"
+            f"Epoch: {epoch} for {list(vgg_blocks)} VGG blocks and {linear_layers} linear layers"
         )
         loss, accuracy, f_score = train(
             train_loader, test_loader, model, loss_fn, optimizer
@@ -107,7 +107,7 @@ def test_vgg_architectures():
     all_conv_numbers = [
         x
         for x in itertools.product(range(4), repeat=len(out_channels))
-        if sum(x) >= 1 and sum(1 for y in x if y > 0) >= 2
+        if sum(1 for n in x if n > 0) >= 2
     ]
     linear_layer_sizes = [32, 64, 128, 256, 1024, 4096]
     all_linear_layers = [
@@ -121,10 +121,11 @@ def test_vgg_architectures():
     for i, architecture in enumerate(architectures[:100]):
         conv_numbers, linear_layers = architecture
         vgg_blocks = zip(conv_numbers, out_channels)
+        print(list(vgg_blocks))
         model, loss, accuracy, f_score = test_vgg(vgg_blocks, linear_layers)
         if best_f_score is None or f_score > best_f_score:
             best_f_score = f_score
-            print(f"New best model found:{vgg_blocks} {linear_layers}")
+            print(f"New best model found:{list(vgg_blocks)} {linear_layers}")
             save_last_n(model, "best_vgg", 3)
         print(f"Best f_score so far: {best_f_score}")
         print("-" * 196)
@@ -284,7 +285,19 @@ def create_submission(model):
 
 # test_mlp_architectures()
 # train_indefinitely(torch.load("best_mlp_0.pth"))
-test_vgg_architectures()
+#test_vgg_architectures()
 
 # create_submission(torch.load("best_mlp_0.pth"))
 # create_submission(torch.load("training_mlp_0.pth"))
+model = torch.load('best_vgg_0.pth')
+optimizer = optim.Adam(
+        model.parameters(),
+    )
+loss_fn = nn.CrossEntropyLoss()
+best_f_score = None
+
+for epoch in range(2, 10):
+    print(f"Epoch {epoch}")
+    train(
+        train_loader, test_loader, model, loss_fn, optimizer
+    )

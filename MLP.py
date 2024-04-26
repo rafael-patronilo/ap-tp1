@@ -197,4 +197,17 @@ def train_indefinitely(model):
         print("Saving current model")
         save_last_n(model, "training_mlp", 4)
 
-test_mlp_architectures()
+#test_mlp_architectures()
+
+model = torch.load('best_mlp_0.pth')
+optimizer = optim.Adam(
+        model.parameters(),
+    )
+loss_fn = nn.CrossEntropyLoss()
+best_f_score = None
+
+for epoch in range(2, 10):
+    print(f"Epoch {epoch}")
+    train(
+        train_loader, test_loader, model, loss_fn, optimizer
+    )
