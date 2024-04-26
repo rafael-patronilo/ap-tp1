@@ -166,7 +166,7 @@ def evaluate(model, loss_fn, loader):
     with torch.no_grad():
         model.eval()
         test_loss, correct = 0, 0
-        f_score = MulticlassF1Score(device=device, average='weighted')
+        f_score = MulticlassF1Score(device=device, average='weighted', num_classes=18)
 
         for X, y in loader:
             print(".", end="")
